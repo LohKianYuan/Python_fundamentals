@@ -1,0 +1,96 @@
+#!/usr/bin/python3
+import os
+import platform
+import netifaces
+import requests
+import shutil
+import operator
+import psutil
+import time
+
+#1. function to display the OS version
+def displayOS():
+	ostype = platform.system()
+	osrelease = platform.release()
+	osversion = platform.version()
+	print(f"OS Type is : {ostype}")
+	print(f"OS Release is : {osrelease}")
+	print(f"OS Version is : {osversion}")
+
+#2. functions to display the IP address, private, public, default gateway.
+def get_private_ip():
+    interfaces = netifaces.interfaces()
+    for interface in interfaces:
+        addresses = netifaces.ifaddresses(interface)
+        if netifaces.AF_INET in addresses:
+            for link in addresses[netifaces.AF_INET]:
+                ip_address = link['addr']
+                if not ip_address.startswith('127.'):
+                    return ip_address
+
+def get_public_ip():
+    response = requests.get('https://api.ipify.org?format=json')
+    if response.status_code == 200:
+        data = response.json()
+        return data['ip']
+
+def get_default_gateway():
+    gws = netifaces.gateways()
+    return gws['default'][netifaces.AF_INET][0]
+	
+def getIPaddress():
+	private_ip = get_private_ip()
+	print("Private IP address:", private_ip)
+	public_ip = get_public_ip()
+	print("Public IP address:", public_ip)
+	default_gateway = get_default_gateway()
+	print("Default gateway:", default_gateway)
+	
+#3. Function to display hard disk size, free & used space
+def getharddisksize():
+	total, used, free = shutil.disk_usage("/")
+	print("Total: %d GiB" % (total // (2**30)))
+	print("Used: %d GiB" % (used // (2**30)))
+	print("Free: %d GiB" % (free // (2**30)))
+
+#4. Functions to display the top five(5) directories and size
+def get_directory_sizes(directory):
+    sizes = {}
+    for root, dirs, files in os.walk(directory):
+        try:
+            size = sum(os.path.getsize(os.path.join(root, name)) for name in files)
+            sizes[root] = size
+        except OSError as e:
+            print('faces error access... skipping')
+    return sizes
+    
+def display_top_directories(directory, n=5):
+    sizes = get_directory_sizes(directory)
+    sorted_sizes = sorted(sizes.items(), key=operator.itemgetter(1), reverse=True)
+    top_directories = sorted_sizes[:n]
+
+    print("Top", n, "directories by size:")
+    for directory, size in top_directories:
+        print(directory, ":", size, "bytes")
+
+def displaydirectorysize(directorypathz):
+	# Specify the directory path to analyze
+	directory_path = directorypathz
+	# Display the top five directories and their sizes
+	display_top_directories(directory_path)
+
+#5. Functions to display the CPU usage, refresh every 10 seconds
+def cpuUsage(x):
+	while True:
+		# Get the CPU utilization percentage over the last 1 second
+		cpu_percent = psutil.cpu_percent(interval=x)
+		# Display the CPU utilization percentage
+		print(f"CPU Utilization: {cpu_percent}%")
+		
+
+#call all functions to run the script
+displayOS()
+getIPaddress()
+getharddisksize()
+displaydirectorysize("/")
+cpuUsage(10)
